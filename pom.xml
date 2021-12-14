@@ -11,11 +11,11 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.30</version>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.22</version>
+            <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -41,6 +41,26 @@
             <artifactId>annotations</artifactId>
             <version>RELEASE</version>
             <scope>compile</scope>
+        </dependency>
+
+        <!--    Java SDK for Tinkoff Open API    -->
+        <!--    core - содержит интерфейсы всех частей REST API и Streaming API, а также модели данных, которые они используют    -->
+        <dependency>
+            <groupId>ru.tinkoff.invest</groupId>
+            <artifactId>openapi-java-sdk-core</artifactId>
+            <version>0.5.1</version>
+        </dependency>
+        <!--    sdk-java8 - содержит реализацию core-интерфейсов с использованием http-клиента из библиотеки OkHttp    -->
+        <dependency>
+            <groupId>ru.tinkoff.invest</groupId>
+            <artifactId>openapi-java-sdk-java8</artifactId>
+            <version>0.5.1</version>
+        </dependency>
+        <!--    example - простой пример использования core-интерфесов, реализованных в sdk-java8 (для компиляции необходим jdk11)    -->
+        <dependency>
+            <groupId>ru.tinkoff.invest</groupId>
+            <artifactId>openapi-java-sdk-example</artifactId>
+            <version>0.5.1</version>
         </dependency>
     </dependencies>
 

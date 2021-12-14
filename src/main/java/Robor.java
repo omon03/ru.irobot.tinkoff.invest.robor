@@ -17,33 +17,41 @@ public class Robor {
     private TradingParameters parameters;
     private BigDecimal wallet;
     private boolean firstSell;
-    private BigDecimal firstSellWallet=new BigDecimal(0);
+    private BigDecimal firstSellWallet = new BigDecimal(0);
 
     public Robor(MarketInstrument instrument, TradingParameters parameters, BigDecimal wallet) {
         this.parameters = parameters;
         this.instrument = instrument;
-        this.wallet=wallet;
-        this.firstSell=true;
+        this.wallet = wallet;
+        this.firstSell = true;
         getOrderList();
     }
 
     public void start() {
         bidPrice = getMaxBidsPrice();
         askPrice = getMaxAsksPrice();
-        TradingParameters.getLogger().info("Подписываемся на свечи "+instrument.getName());
-        TradingParameters.getApi().getStreamingContext().sendRequest(StreamingRequest.subscribeCandle(instrument.getFigi(), CandleInterval._1MIN));
+        TradingParameters.getLogger().info("Подписываемся на свечи " + instrument.getName());
+        TradingParameters.getApi()
+                        .getStreamingContext()
+                        .sendRequest(StreamingRequest.subscribeCandle(instrument.getFigi(), CandleInterval._1MIN));
     }
 
     public BigDecimal getWallet () {
         return wallet;
     }
 
-    public void setBidPrice (BigDecimal bidPrice) {bidPrice=bidPrice;}
+    public void setBidPrice (BigDecimal bidPrice) {
+        this.bidPrice = bidPrice;
+    }
 
-    public void setAskPrice (BigDecimal askPrice) {askPrice=askPrice;}
+    public void setAskPrice (BigDecimal askPrice) {
+        this.askPrice = askPrice;
+    }
 
     public void stop() {
-        TradingParameters.getApi().getStreamingContext().sendRequest(StreamingRequest.unsubscribeCandle(instrument.getFigi(), CandleInterval._1MIN));
+        TradingParameters.getApi()
+                        .getStreamingContext()
+                        .sendRequest(StreamingRequest.unsubscribeCandle(instrument.getFigi(), CandleInterval._1MIN));
     }
 
     public BigDecimal getMaxBidsPrice() {
@@ -84,38 +92,51 @@ public class Robor {
     }
 
     private void makeSell(StreamingEvent.Candle event) {
-        if(wallet.compareTo(parameters.value)>=0) {
-            int countInst = TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getLots();
-            if (countInst > 0) {
-                //    System.out.println(TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getBalance().divide(new BigDecimal(TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getLots())));
-                BigDecimal balance = TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getBalance().divide(new BigDecimal(TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getLots()));
-                //    BigDecimal balance = TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getAveragePositionPrice().getValue();
-                BigDecimal profit = lastPrice.divide(balance).multiply(new BigDecimal(100));
-                TradingParameters.getLogger().info("В портфеле  " + countInst + " лотов с ценой " + balance + " возможная прибыль %" + profit);
-                if (profit.compareTo(parameters.profit) >= 0) {
-                    int value=0;
-                    if (firstSell) {
-                        System.out.println("Это первая продажа "+firstSellWallet);
-                        value = parameters.value.divide(lastPrice,0,1).intValue();
-                        if (value > countInst) value = countInst;
-                        if (value > event.getTradingValue().intValue()) value = event.getTradingValue().intValue() / 2;
-                    } else {
-                        value = parameters.value.subtract(wallet).divide(lastPrice,0,1).intValue();
-                        if (value > event.getTradingValue().intValue()) value = event.getTradingValue().intValue() / 2;
-                    }
-                        TradingParameters.getLogger().info("Прибыль достаточна, продаем " + value + " лотов");
-                        setMarketOrder(value, OperationType.SELL);
-                        BigDecimal price = lastPrice.multiply(new BigDecimal(value));
-                        wallet = wallet.add(price);
-                        firstSellWallet=firstSellWallet.add(price);
-                        if(firstSellWallet.compareTo(parameters.value)>=0) firstSell = false;
-                        if(wallet.compareTo(parameters.value)>0) wallet=parameters.value;
-                    System.out.println("wallet="+wallet);
-                    System.out.println(firstSellWallet);
+        if (wallet.compareTo(parameters.value) < 0) {
+            return;
+        }
+        int countInst = TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getLots();
+        if (countInst > 0) {
+            //    System.out.println(TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getBalance().divide(new BigDecimal(TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getLots())));
+            BigDecimal balance = TradingParameters.getPortfolio()
+                    .getPortfolioByFigi(instrument.getFigi())
+                    .getBalance()
+                    .divide(new BigDecimal(TradingParameters.getPortfolio()
+                                                            .getPortfolioByFigi(instrument.getFigi())
+                                                            .getLots()));
+            //    BigDecimal balance = TradingParameters.getPortfolio().getPortfolioByFigi(instrument.getFigi()).getAveragePositionPrice().getValue();
+            BigDecimal profit = lastPrice.divide(balance).multiply(new BigDecimal(100));
+            TradingParameters.getLogger().info("В портфеле  " + countInst
+                    + " лотов с ценой " + balance
+                    + " возможная прибыль %" + profit);
+            if (profit.compareTo(parameters.profit) >= 0) {
+                int value=0;
+                if (firstSell) {
+                    System.out.println("Это первая продажа " + firstSellWallet);
+                    value = parameters.value.divide(lastPrice, 0, 1).intValue();
+                    if (value > countInst) value = countInst;
+                } else {
+                    value = parameters.value.subtract(wallet).divide(lastPrice, 0, 1).intValue();
                 }
-                 else {
-                    TradingParameters.getLogger().info("Прибыль не достаточна ");
+                if (value > event.getTradingValue().intValue()) {
+                    value = event.getTradingValue().intValue() / 2;
                 }
+                TradingParameters.getLogger().info("Прибыль достаточна, продаем " + value + " лотов");
+                setMarketOrder(value, OperationType.SELL);
+                BigDecimal price = lastPrice.multiply(new BigDecimal(value));
+                wallet = wallet.add(price);
+                firstSellWallet = firstSellWallet.add(price);
+                if (firstSellWallet.compareTo(parameters.value) >= 0) {
+                    firstSell = false;
+                }
+                if (wallet.compareTo(parameters.value) > 0) {
+                    wallet=parameters.value;
+                }
+                System.out.println("wallet=" + wallet);
+                System.out.println(firstSellWallet);
+            }
+             else {
+                TradingParameters.getLogger().info("Прибыль не достаточна ");
             }
         }
     }
@@ -126,19 +147,27 @@ public class Robor {
         if (cur.equals("USD")) {
             BigDecimal value;
             value = TradingParameters.getPortfolio().getPortfolioByTicker("USD000UTSTOM").getBalance();
-            if(value.compareTo(parameters.value)>0) value=parameters.value;
+            if (value.compareTo(parameters.value) > 0) {
+                value = parameters.value;
+            }
             if (getPlanProfit().compareTo(parameters.profit) >= 0) {
                 BigDecimal count = value.divide(getLastPrice(), 0, 3);
                 if (count.compareTo(event.getTradingValue()) > 0) {
                     count = event.getTradingValue().divide(new BigDecimal(1));
                 }
-                TradingParameters.getLogger().info("Позиция "+instrument.getName()+" Цена покупки " + lastPrice + "; Цена продажи " + askPrice + "; Прибыльность операции " + getPlanProfit()+" Берем "+count);
-                    setMarketOrder(count.intValue(), OperationType.BUY);
-                    BigDecimal price = lastPrice.multiply(new BigDecimal(count.intValue()));
-                    wallet=wallet.subtract(price);
+                TradingParameters.getLogger().info("Позиция " + instrument.getName()
+                        + " Цена покупки " + lastPrice
+                        + "; Цена продажи " + askPrice
+                        + "; Прибыльность операции " + getPlanProfit()
+                        + " Берем " + count);
+                setMarketOrder(count.intValue(), OperationType.BUY);
+                BigDecimal price = lastPrice.multiply( new BigDecimal(count.intValue()) );
+                wallet = wallet.subtract(price);
                 System.out.println(wallet);
             } else {
-                TradingParameters.getLogger().info("Позиция "+instrument.getName()+" Прибыльность " + getPlanProfit() + " ниже плановой " + parameters.profit);
+                TradingParameters.getLogger().info("Позиция " + instrument.getName()
+                        + " Прибыльность " + getPlanProfit()
+                        + " ниже плановой " + parameters.profit);
             }
         }
     }
@@ -155,7 +184,7 @@ public class Robor {
     public BigDecimal getPlanProfit() {
         int round = 2; //Точность расчета комисии
         BigDecimal planProfit;
-        BigDecimal commition = new BigDecimal(0.003);
+        BigDecimal commition = new BigDecimal("0.003");
         BigDecimal lastPriceComm = lastPrice.add(lastPrice.multiply(commition)).setScale(round, RoundingMode.HALF_UP);
         BigDecimal askPriceComm = askPrice.subtract(askPrice.multiply(commition)).setScale(round, RoundingMode.HALF_UP);
 //        System.out.println(lastPriceComm);
@@ -163,13 +192,16 @@ public class Robor {
 //        planProfit = BigDecimal.valueOf(1).subtract(lastPrice.divide(bidPrice)).multiply(new BigDecimal(100));
 //            multiply(askPrice.subtract(bidPrice).subtract(askPrice.multiply(commition).setScale(round, RoundingMode.HALF_UP).add(bidPrice.multiply(commition).setScale(round, RoundingMode.HALF_UP)))).
 //                multiply(bidPrice);
-        planProfit = BigDecimal.valueOf(1).subtract(lastPriceComm.divide(askPriceComm, 3, RoundingMode.HALF_UP)).multiply(new BigDecimal(100));
+        planProfit = BigDecimal.valueOf(1)
+                .subtract( lastPriceComm.divide(askPriceComm, 3, RoundingMode.HALF_UP) )
+                .multiply(new BigDecimal(100));
 //        System.out.println(planProfit);
         return planProfit;
     }
 
     private void getOrderList() {
-        final var order = TradingParameters.getApi().getMarketContext().getMarketOrderbook(instrument.getFigi(), 50).join();
+        final var order = TradingParameters.getApi().getMarketContext()
+                .getMarketOrderbook(instrument.getFigi(), 50).join();
         bidsList = order.get().getBids().toArray(new OrderResponse[0]);
         asksList = order.get().getAsks().toArray(new OrderResponse[0]);
     }
@@ -187,17 +219,18 @@ public class Robor {
     }
 
     private static int getMaxQuantity(OrderResponse[] list) {
-        int count;
-        count = getMax(list);
-        return list[count].getQuantity();
+        return list[getMax(list)].getQuantity();
     }
 
     private static BigDecimal getMaxPrice(OrderResponse[] list) {
-        int count;
-        count = getMax(list);
-        if(count==0) {return new BigDecimal(0);}
+        int count = getMax(list);
+        if (count == 0) {
+            return new BigDecimal(0);
+        }
         return list[count].getPrice();
     }
 
-    public MarketInstrument getInstrument () {return instrument;}
+    public MarketInstrument getInstrument () {
+        return instrument;
+    }
 }

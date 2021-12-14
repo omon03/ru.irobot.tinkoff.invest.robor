@@ -2,6 +2,7 @@ import ru.tinkoff.invest.openapi.model.rest.Order;
 import ru.tinkoff.invest.openapi.model.rest.PortfolioPosition;
 
 import java.util.List;
+import java.util.Objects;
 
 public class  RoborPortfolio {
     TradingParameters parameters;
@@ -9,60 +10,77 @@ public class  RoborPortfolio {
     List<Order> myOrders;
 
     public RoborPortfolio (TradingParameters parameters) {
-        this.parameters=parameters;
+        this.parameters = parameters;
         update();
     }
 
     public void update() {
-        var currentPositions = parameters.getApi().getPortfolioContext().getPortfolio(null).join();
+        var currentPositions = parameters.getApi().getPortfolioContext()
+                .getPortfolio(null).join();
         int count = currentPositions.getPositions().size();
         myPortfolio = new PortfolioPosition[count];
-        for(int i=0;i<count;i++) {
+        for (int i = 0; i < count; i++) {
             myPortfolio[i]=currentPositions.getPositions().get(i);
         }
         myOrders = parameters.getApi().getOrdersContext().getOrders(null).join();
     }
 
-    public PortfolioPosition getPortfolioByTicker (String ticker) {
-        int i;
-        for(i=0;i< myPortfolio.length;i++) {
-            if(ticker.equals(myPortfolio[i].getTicker())) return myPortfolio[i];
+    public PortfolioPosition getPortfolioByTicker(String ticker) {
+        int i = 0;
+        for (; i < myPortfolio.length; i++) {
+            if ( ticker.equals(myPortfolio[i].getTicker()) ) {
+                return myPortfolio[i];
+            }
         }
-        return  myPortfolio[i];
-
-        }
+        return  myPortfolio[i - 1];
+    }
 
     public PortfolioPosition getPortfolioByFigi(String figi) {
-        int i;
-        for(i=0;i< myPortfolio.length-1;i++) {
-           if(figi.equals(myPortfolio[i].getFigi())) return myPortfolio[i];
+        int i = 0;
+        for (; i < myPortfolio.length; i++) {
+            if (figi.equals(myPortfolio[i].getFigi())) {
+                return myPortfolio[i];
+            }
         }
-       return  myPortfolio[i];
-    };
+        return  myPortfolio[i - 1];
+    }
 
-    public int getPortfolioSize () {
+    public int getPortfolioSize() {
         return myPortfolio.length;
     }
 
-    public int getOrdersSize () {return myOrders.size(); }
+    public int getOrdersSize() {
+        return myOrders.size();
+    }
 
-    public Order getOrderByID(int id) {return myOrders.get(id);}
+    public Order getOrderByID(int id) {
+        return myOrders.get(id);
+    }
 
     public Order getOrderByFigi(String figi) {
-        int i;
-        for(i=1;i<myOrders.size();i++) {
-            if(figi==myOrders.get(i).getFigi()) {return myOrders.get(i);}
+        int i = 1;
+        for (; i < myOrders.size(); i++) {
+            if ( Objects.equals(figi, myOrders.get(i).getFigi()) ) {
+                return myOrders.get(i);
+            }
         }
-        return myOrders.get(i);
+        return myOrders.get(i - 1);
     }
 
     public String toString() {
-        String ex = "RoborPortfolio {"+'\n';
-        for(int i=0;i< myPortfolio.length;i++) {
-            ex=ex+'\t'+myPortfolio[i].getName()+"="+myPortfolio[i].getBalance()+", "+myPortfolio[i].getLots()+","+'\n';
+        StringBuilder ex = new StringBuilder("RoborPortfolio {" + '\n');
+        for (PortfolioPosition portfolioPosition : myPortfolio) {
+            ex.append('\t')
+                .append(portfolioPosition.getName())
+                .append("=")
+                .append(portfolioPosition.getBalance())
+                .append(", ")
+                .append(portfolioPosition.getLots())
+                .append(",")
+                .append('\n');
         }
-        ex=ex+"}";
+        ex.append("}");
 
-        return ex;
+        return ex.toString();
     }
 }
